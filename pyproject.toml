@@ -24,3 +24,8 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: tests that hit Urban Dictionary (deselected by default, use --run-live)",
+]

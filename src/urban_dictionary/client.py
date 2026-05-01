@@ -2,7 +2,7 @@ import hashlib
 import json
 
 from urban_dictionary.cache import Cache
-from urban_dictionary.scraper import scrape_definitions, _yesterday
+from urban_dictionary.scraper import scrape_definitions
 
 
 class UrbanDictionary:
@@ -54,16 +54,9 @@ class UrbanDictionary:
         return _call()
 
     def browse(self, character, *, limit=None, page=None, multi_page=None):
-        if character == "new":
-            path = "yesterday.php"
-            resolved_char = _yesterday()
-        else:
-            path = "browse.php"
-            resolved_char = character
-
         def _call():
             result = scrape_definitions(
-                path, "browse", character=resolved_char, limit=limit,
+                "browse.php", "browse", character=character, limit=limit,
                 page=page, multi_page=multi_page,
             )
             result["character"] = character
@@ -91,18 +84,3 @@ class UrbanDictionary:
             page=page, multi_page=multi_page,
         )
 
-    def date(self, date_str, *, limit=None, page=None, multi_page=None):
-        # Urban Dictionary has removed yesterday.php — this endpoint
-        # will return 404. Kept for forward compatibility if they restore it.
-        def _call():
-            result = scrape_definitions(
-                "yesterday.php", "date", date_str=date_str, limit=limit,
-                page=page, multi_page=multi_page,
-            )
-            result["date"] = date_str
-            return result
-
-        return self._cached_call(
-            "date", callable_=_call, date_str=date_str, limit=limit,
-            page=page, multi_page=multi_page,
-        )

@@ -1,18 +1,9 @@
 import re
-from datetime import date, timedelta
 
 import requests
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.urbandictionary.com"
-
-
-def _yesterday():
-    return (date.today() - timedelta(days=1)).isoformat()
-
-
-def _previous_date(date_str):
-    return (date.fromisoformat(date_str) - timedelta(days=1)).isoformat()
 
 
 def _extract_details(definition_el):
@@ -61,7 +52,7 @@ def _extract_word_list(soup):
     return [li.select_one("a").get_text() for li in items if li.select_one("a")]
 
 
-def _build_url(path, scrape_type, *, term=None, author=None, character=None, date_str=None):
+def _build_url(path, scrape_type, *, term=None, author=None, character=None):
     url = f"{BASE_URL}/{path}"
     if scrape_type == "search" and term:
         url += f"?term={requests.utils.quote(term)}"
@@ -72,8 +63,6 @@ def _build_url(path, scrape_type, *, term=None, author=None, character=None, dat
             url += f"?character={requests.utils.quote(character or '')}"
     elif scrape_type == "author" and author:
         url += f"?author={requests.utils.quote(author)}"
-    elif scrape_type == "date" and date_str:
-        url += f"?date={date_str}"
     return url
 
 
@@ -104,10 +93,10 @@ def _resolve_pages(page, multi_page):
 
 
 def scrape_definitions(path, scrape_type="search", *, term=None, author=None,
-                       character=None, date_str=None, strict=False,
+                       character=None, strict=False,
                        match_case=False, limit=None, page=None, multi_page=None):
     url = _build_url(path, scrape_type, term=term, author=author,
-                     character=character, date_str=date_str)
+                     character=character)
     soup = _get_soup(url)
 
     definitions = soup.select(".definition")
@@ -130,12 +119,11 @@ def scrape_definitions(path, scrape_type="search", *, term=None, author=None,
 
     results = []
     break_loop = False
-    date_changed = False
 
     while current_page <= max_page:
-        if current_page > 1 or date_changed:
+        if current_page > 1:
             page_url = _build_url(path, scrape_type, term=term, author=author,
-                                  character=character, date_str=date_str)
+                                  character=character)
             page_url += f"&page={current_page}"
             soup = _get_soup(page_url)
 
@@ -155,15 +143,8 @@ def scrape_definitions(path, scrape_type="search", *, term=None, author=None,
                     break_loop = True
                     break
 
-        elif scrape_type in ("browse", "date"):
+        elif scrape_type == "browse":
             words = _extract_word_list(soup)
-
-            if (scrape_type != "date"
-                    and re.match(r"^\d{4}-\d{2}-\d{2}$", character or "")
-                    and not results and not words):
-                character = _previous_date(character)
-                date_changed = True
-                continue
 
             for word in words:
                 results.append(word)
@@ -174,7 +155,6 @@ def scrape_definitions(path, scrape_type="search", *, term=None, author=None,
         if break_loop:
             break
 
-        date_changed = False
         current_page += 1
 
     return {
