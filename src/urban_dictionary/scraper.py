@@ -6,6 +6,13 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://www.urbandictionary.com"
 
 
+def _clean_text(el):
+    for br in el.find_all("br"):
+        br.replace_with("\n")
+    lines = el.get_text().splitlines()
+    return "\n".join(re.sub(r"[ \t]+", " ", line).strip() for line in lines).strip()
+
+
 def _extract_details(definition_el):
     word_el = definition_el.select_one(".word")
     meaning_el = definition_el.select_one(".meaning")
@@ -30,8 +37,8 @@ def _extract_details(definition_el):
 
     return {
         "word": word_el.get_text(strip=True) if word_el else "",
-        "meaning": meaning_el.get_text(strip=True) if meaning_el else "",
-        "example": example_el.get_text(strip=True) if example_el else "",
+        "meaning": _clean_text(meaning_el) if meaning_el else "",
+        "example": _clean_text(example_el) if example_el else "",
         "contributor": contributor,
         "date": entry_date,
     }
